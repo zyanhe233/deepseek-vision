@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.messages import router as messages_router
@@ -59,6 +60,7 @@ ALLOWED_ROUTES: set[tuple[str, str]] = {
     ("POST", "/v1/messages/count_tokens"),
     ("POST", "/v1/chat/completions"),
     ("POST", "/api/event_logging/batch"),
+    ("GET", "/"),
 }
 
 _SCAN_PATTERN = re.compile(
@@ -158,6 +160,13 @@ app.include_router(models_router, prefix="/v1")
 
 from app.openai_compat import router as openai_router
 app.include_router(openai_router, prefix="/v1")
+
+_STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+
+@app.get("/")
+async def ui():
+    return FileResponse(os.path.join(_STATIC_DIR, "index.html"))
 
 
 @app.get("/health")
