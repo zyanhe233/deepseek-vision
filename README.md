@@ -42,6 +42,21 @@ pip install . && python main.py
 
 ---
 
+## 界面预览
+
+<table>
+  <tr>
+    <td align="center"><b>登录页</b></td>
+    <td align="center"><b>配置器</b></td>
+  </tr>
+  <tr>
+    <td><img src="./docs/screenshot-login.png" alt="登录页" width="380"/></td>
+    <td><img src="./docs/screenshot-dashboard.png" alt="配置器" width="380"/></td>
+  </tr>
+</table>
+
+---
+
 ## 接口列表
 
 | 方法 | 路径 | 说明 |

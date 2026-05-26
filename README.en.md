@@ -31,6 +31,21 @@ docker run --env-file .env -p 8000:8000 deepseek-vision
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><b>Login</b></td>
+    <td align="center"><b>Dashboard</b></td>
+  </tr>
+  <tr>
+    <td><img src="./docs/screenshot-login.png" alt="Login" width="380"/></td>
+    <td><img src="./docs/screenshot-dashboard.png" alt="Dashboard" width="380"/></td>
+  </tr>
+</table>
+
+---
+
 ## Endpoints
 
 | Method | Path | Description |
