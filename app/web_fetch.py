@@ -19,7 +19,7 @@ from uuid import uuid4
 import httpcore
 import httpx
 
-from app.backends.base import LLMBackend
+from app.backends import LLMBackend
 from app.config import settings
 from app.schemas import MessageRequest, MessageResponse, Usage
 
