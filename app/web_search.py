@@ -12,7 +12,6 @@ import json
 import logging
 import re
 from typing import Any, AsyncGenerator, Dict, List, Optional
-from urllib.parse import quote
 
 import httpx
 
@@ -66,10 +65,6 @@ def decode_content(encoded: str) -> str:
 # --- Search providers ---
 
 def _get_tavily_url() -> str:
-    """Return Tavily search endpoint, routing through proxy when TAVILY_PROXY_URL is set."""
-    if settings.tavily_proxy_url:
-        encoded_target = quote("https://api.tavily.com", safe="")
-        return f"{settings.tavily_proxy_url.rstrip('/')}/forward/search?target={encoded_target}"
     return "https://api.tavily.com/search"
 
 
