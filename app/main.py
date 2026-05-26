@@ -147,6 +147,11 @@ async def security_middleware(request: Request, call_next):
         resp = await call_next(request)
         return _add_security_headers(resp)
 
+    # Static files: icon and other public assets
+    if method == "GET" and path in ("/icon.png", "/favicon.ico"):
+        resp = await call_next(request)
+        return _add_security_headers(resp)
+
     if (method, path) in ALLOWED_ROUTES:
         resp = await call_next(request)
         return _add_security_headers(resp)
@@ -215,6 +220,11 @@ _STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 if os.path.isdir(os.path.join(_STATIC_DIR, "assets")):
     app.mount("/assets", StaticFiles(directory=os.path.join(_STATIC_DIR, "assets")), name="assets")
+
+
+@app.get("/icon.png")
+async def icon():
+    return FileResponse(os.path.join(_STATIC_DIR, "icon.png"), media_type="image/png")
 
 
 @app.get("/")
