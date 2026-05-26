@@ -1,94 +1,101 @@
 # deepseek-vision
 
-**Vision, web search, and OpenAI-compatible proxy for DeepSeek models.**
+**为 DeepSeek 补齐视觉理解、联网搜索与 OpenAI 兼容接口的代理服务。**
 
-DeepSeek's API is text-only and Anthropic-shaped. Most agent frameworks (Cline,
-Cherry Studio, LangChain, Claude Code, Cursor) expect:
+[English](./README.en.md)
 
-- Multimodal input (images, screenshots, PDFs)
-- Built-in `web_search` / `web_fetch` tools
-- The OpenAI `/v1/chat/completions` interface
+DeepSeek 官方 API 是纯文本的，且使用 Anthropic Messages 协议。但绝大多数 AI 客户端（Cline、Cherry Studio、LangChain、Claude Code、Cursor）都期望：
 
-This proxy adds all three, so a single DeepSeek API key plugs into any tool
-that supports Claude or GPT-4.
+- 多模态输入（图片、截图、PDF）
+- 内置 `web_search` / `web_fetch` 工具
+- OpenAI `/v1/chat/completions` 接口
+
+deepseek-vision 把这三项能力一次补齐，一个 DeepSeek API Key 即可直接插入所有支持 Claude 或 GPT-4 的工具。
 
 ---
 
-## Quick start
+## 快速开始
 
-### Docker
+### 配置器（推荐）
+
+启动后访问 `http://localhost:8000`，在配置器页面填写 API Key，点击「应用并重启」即可。
 
 ```bash
-cp .env.example .env
-# Fill in at minimum: MASTER_API_KEY, DEEPSEEK_API_KEY
+# Docker
 docker build -t deepseek-vision .
+docker run -p 8000:8000 deepseek-vision
+```
+
+### 手动配置
+
+```bash
+cp .env.example .env
+# 编辑 .env，至少填写：ADMIN_PASSWORD、MASTER_API_KEY、DEEPSEEK_API_KEY
+```
+
+```bash
+# Docker
 docker run --env-file .env -p 8000:8000 deepseek-vision
+
+# 本地（uv）
+uv sync && uv run python main.py
+
+# 本地（pip）
+pip install . && python main.py
 ```
-
-### Local (uv)
-
-```bash
-cp .env.example .env
-uv sync
-uv run python main.py
-```
-
-### Local (pip)
-
-```bash
-cp .env.example .env
-pip install -e .
-python main.py
-```
-
-The proxy listens on `http://localhost:8000` by default.
 
 ---
 
-## Endpoints
+## 接口列表
 
-| Method | Path | Description |
-|--------|------|-------------|
+| 方法 | 路径 | 说明 |
+|------|------|------|
 | `POST` | `/v1/messages` | Anthropic Messages API |
-| `POST` | `/v1/messages/count_tokens` | Token counting |
+| `POST` | `/v1/messages/count_tokens` | Token 计数 |
 | `POST` | `/v1/chat/completions` | OpenAI Chat Completions API |
-| `GET`  | `/v1/models` | List available models |
-| `GET`  | `/health` | Liveness check |
+| `GET`  | `/v1/models` | 查询可用模型 |
+| `GET`  | `/health` | 存活检查 |
+| `GET`  | `/` | 配置器 UI |
 
-All endpoints require the `x-api-key` header (Anthropic style) **or**
-`Authorization: Bearer <key>` (OpenAI style).
+所有 API 端点需要通过 `x-api-key` 请求头（Anthropic 风格）或 `Authorization: Bearer <key>`（OpenAI 风格）传入 `MASTER_API_KEY`。
 
 ---
 
-## How it works
+## 工作原理
 
 ```
-Client (Anthropic SDK / OpenAI SDK / LangChain / Cline)
+客户端（Anthropic SDK / OpenAI SDK / LangChain / Cline）
     │
-    ├─ POST /v1/chat/completions  ──►  OpenAI → Anthropic conversion
-    │                                         │
-    └─ POST /v1/messages  ───────────────────►┤
-                                              │
-                                    Vision middleware
-                                    (image blocks → text descriptions
-                                     via your vision model)
-                                              │
-                                    web_search / web_fetch middleware
-                                    (Anthropic tool protocol → Tavily/Brave
-                                     → results injected back into context)
-                                              │
-                                    DeepSeek upstream
-                                    (Anthropic Messages API)
-                                              │
-                                    Response → caller format
+    ├─ POST /v1/chat/completions  ──►  OpenAI → Anthropic 格式转换
+    │                                            │
+    └─ POST /v1/messages  ──────────────────────►┤
+                                                 │
+                                       视觉中间件
+                                       图片块 → 调用视觉模型 → 文字描述
+                                                 │
+                                       web_search / web_fetch 中间件
+                                       Anthropic 工具协议 → Tavily/Brave
+                                       → 结果注入上下文
+                                                 │
+                                       DeepSeek 上游
+                                       （Anthropic Messages API）
+                                                 │
+                                       响应 → 返回给客户端
 ```
 
 ---
 
-## Vision
+## 视觉补齐
 
-Configure any OpenAI-compatible vision endpoint to describe images before
-forwarding the request to DeepSeek:
+默认使用阿里云 Qwen（`qwen3.6-flash`），只需填写 `VISION_API_KEY` 即可启用：
+
+```env
+VISION_API_KEY=sk-your-dashscope-key
+```
+
+每个请求里的 `image` 内容块会被替换为 `[Image N] <描述文字>` 的文本块，多张图片并行处理。
+
+也可以替换为其他 OpenAI 兼容的视觉模型：
 
 ```env
 VISION_BASE_URL=https://api.openai.com/v1
@@ -96,67 +103,49 @@ VISION_API_KEY=sk-...
 VISION_MODEL=gpt-4o-mini
 ```
 
-When configured, every `image` content block in the request is replaced with a
-`[Image N] <description>` text block. Multiple images are processed in parallel.
-
-Compatible vision backends (anything with an OpenAI-compatible `/v1/chat/completions`):
-- OpenAI (`gpt-4o`, `gpt-4o-mini`)
-- Qwen-VL (`qwen-vl-max`, `qwen-vl-plus`)
-- GLM-4V, InternVL, LLaVA via vLLM
-- Any self-hosted OpenAI-compatible server
-
-When `VISION_*` is not set, image blocks are forwarded as-is (useful if your
-upstream already supports vision).
+支持的视觉后端（任何具有 OpenAI 兼容接口的服务）：
+- 阿里云 DashScope（`qwen3.6-flash`、`qwen-vl-max` 等）
+- OpenAI（`gpt-4o`、`gpt-4o-mini`）
+- GLM-4V、InternVL、LLaVA（通过 vLLM 自部署）
 
 ---
 
-## Web search & web fetch
+## 联网搜索与网页抓取
 
-Add the `web_search` or `web_fetch` tool to your request using the Anthropic
-tool protocol. The proxy intercepts the tool calls, performs the actual
-search/fetch, and feeds results back — DeepSeek never needs to leave its
-text-generation role.
+在请求中使用 Anthropic 工具协议添加 `web_search` 或 `web_fetch` 工具。代理会拦截工具调用、执行搜索/抓取，并将结果注回上下文——DeepSeek 本身仍只做文本生成。
 
 ### web_search
 
-Uses a two-round architecture: the model plans all queries in one shot (parallel
-execution), then synthesises the results into a final answer. Sources are
-automatically cited with `[N]` markers.
+两轮架构：第一轮让模型规划所有查询（并行执行），第二轮基于搜索结果生成最终答案。结果自动附加 `[N]` 引用标注。
 
-Configure Tavily (recommended) or Brave:
+配置 Tavily（推荐）或 Brave：
 
 ```env
-WEB_SEARCH_PROVIDER=tavily
 TAVILY_API_KEY=tvly-...
-# or
+# 或
 WEB_SEARCH_PROVIDER=brave
 BRAVE_API_KEY=BSA-...
 ```
 
 ### web_fetch
 
-Fetches URLs with SSRF protection and DNS pinning. Supports HTML, plain text,
-and PDF (base64-forwarded). Results are cited with `[Document N]` markers.
-
-No additional configuration needed beyond enabling the tool in your request.
+带 SSRF 防护和 DNS pinning 的 URL 抓取。支持 HTML、纯文本和 PDF。结果自动附加 `[Document N]` 引用标注。无需额外配置。
 
 ---
 
-## Model configuration
+## 模型配置
 
-By default the proxy exposes `deepseek-chat` and `deepseek-reasoner`. Customise
-via `DEEPSEEK_MODELS` (comma-separated, optionally with `client-id:upstream-id`
-aliasing):
+默认暴露 `deepseek-v4-pro` 和 `deepseek-v4-flash`，可通过 `DEEPSEEK_MODELS` 自定义：
 
 ```env
-# Bare names (client ID == upstream ID)
-DEEPSEEK_MODELS=deepseek-chat,deepseek-reasoner
+# 直接使用上游 ID
+DEEPSEEK_MODELS=deepseek-v4-pro,deepseek-v4-flash
 
-# With aliasing
-DEEPSEEK_MODELS=fast:deepseek-chat,smart:deepseek-reasoner
+# 使用别名（client-id:upstream-id）
+DEEPSEEK_MODELS=pro:deepseek-v4-pro,flash:deepseek-v4-flash
 ```
 
-Add a second Anthropic-compatible upstream via `EXTRA_BACKEND_*`:
+通过 `EXTRA_BACKEND_*` 添加第二个 Anthropic 兼容上游：
 
 ```env
 EXTRA_BACKEND_NAME=my-provider
@@ -167,45 +156,32 @@ EXTRA_BACKEND_MODELS=model-a,model-b
 
 ---
 
-## Configuration reference
+## 配置项说明
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MASTER_API_KEY` | *(required)* | Comma-separated list of accepted API keys |
-| `DEEPSEEK_API_KEY` | *(required)* | DeepSeek API key |
-| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/anthropic` | DeepSeek Messages endpoint |
-| `DEEPSEEK_MODELS` | `deepseek-chat,deepseek-reasoner` | Models to expose |
-| `EXTRA_BACKEND_NAME` | — | Name for the optional extra upstream |
-| `EXTRA_BACKEND_BASE_URL` | — | Base URL of the extra upstream |
-| `EXTRA_BACKEND_API_KEY` | — | API key for the extra upstream |
-| `EXTRA_BACKEND_MODELS` | — | Models to expose from the extra upstream |
-| `VISION_BASE_URL` | — | OpenAI-compatible vision endpoint base URL |
-| `VISION_API_KEY` | — | API key for the vision endpoint |
-| `VISION_MODEL` | — | Vision model name (e.g. `gpt-4o-mini`) |
-| `VISION_PROMPT` | *(built-in)* | System prompt sent to the vision model |
-| `WEB_SEARCH_PROVIDER` | `tavily` | Search provider (`tavily` or `brave`) |
-| `TAVILY_API_KEY` | — | Tavily API key |
-| `BRAVE_API_KEY` | — | Brave Search API key |
-| `WEB_SEARCH_MAX_RESULTS` | `5` | Max results per search query |
-| `WEB_SEARCH_DEFAULT_MAX_USES` | `3` | Max search calls per request |
-| `WEB_FETCH_DEFAULT_MAX_USES` | `5` | Max fetch calls per request |
-| `WEB_FETCH_DEFAULT_MAX_CONTENT_TOKENS` | `100000` | Max content length per fetch |
-| `PORT` | `8000` | Server port |
-| `LOG_LEVEL` | `INFO` | Logging level |
-| `UPSTREAM_TIMEOUT` | `900` | Non-streaming request timeout (seconds) |
-| `UPSTREAM_STREAM_TIMEOUT` | `1200` | Streaming request timeout (seconds) |
-| `STREAM_PING_INTERVAL_SEC` | `10` | SSE keep-alive ping interval |
-| `SLOW_REQUEST_THRESHOLD_MS` | `20000` | Dump diagnostics for requests slower than this |
-| `DEBUG_UPSTREAM` | `false` | Log full upstream request bodies |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `ADMIN_PASSWORD` | `123456` | 配置器登录密码，**请修改** |
+| `MASTER_API_KEY` | 必填 | 客户端访问代理所用的 Key，逗号分隔支持多个 |
+| `DEEPSEEK_API_KEY` | 必填 | DeepSeek API Key |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com/anthropic` | DeepSeek 上游地址 |
+| `DEEPSEEK_MODELS` | `deepseek-v4-pro,deepseek-v4-flash` | 暴露给客户端的模型列表 |
+| `VISION_BASE_URL` | `https://dashscope.aliyuncs.com/compatible-mode/v1` | 视觉模型接口地址 |
+| `VISION_API_KEY` | — | 视觉模型 API Key（留空则禁用视觉补齐） |
+| `VISION_MODEL` | `qwen3.6-flash` | 视觉模型名称 |
+| `VISION_MAX_IMAGES` | `5` | 单次请求最多处理的图片数量 |
+| `WEB_SEARCH_PROVIDER` | `tavily` | 搜索服务商（`tavily` 或 `brave`） |
+| `TAVILY_API_KEY` | — | Tavily API Key |
+| `BRAVE_API_KEY` | — | Brave Search API Key |
+| `PORT` | `8000` | 服务端口 |
+| `LOG_LEVEL` | `INFO` | 日志级别 |
 
 ---
 
 ## Roadmap
 
-- [ ] `/v1/embeddings` endpoint
-- [ ] SearXNG search provider (self-hosted)
-- [ ] Streaming tool calls in OpenAI compat mode
-- [ ] Anthropic-native vision provider support
+- [ ] `/v1/embeddings` 接口
+- [ ] SearXNG 搜索支持（自部署）
+- [ ] OpenAI 兼容模式下的流式工具调用
 
 ---
 
