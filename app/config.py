@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     deepseek_base_url: str = Field(default="https://api.deepseek.com/anthropic", alias="DEEPSEEK_BASE_URL")
     # Comma-separated list of model IDs to expose (client-id == upstream-id).
     # Supports "client-id:upstream-id" syntax for aliasing.
-    deepseek_models: str = Field(default="deepseek-chat,deepseek-reasoner", alias="DEEPSEEK_MODELS")
+    deepseek_models: str = Field(default="deepseek-v4-pro,deepseek-v4-flash", alias="DEEPSEEK_MODELS")
 
     # Optional extra Anthropic-compatible upstream
     extra_backend_name: Optional[str] = Field(default=None, alias="EXTRA_BACKEND_NAME")
@@ -46,6 +46,8 @@ class Settings(BaseSettings):
         default="Describe this image in detail. Be specific about text, objects, layout, and colors.",
         alias="VISION_PROMPT",
     )
+    # Max number of images to process per request; additional images are passed through unchanged.
+    vision_max_images: int = Field(default=5, alias="VISION_MAX_IMAGES")
 
     # Request timeouts (seconds)
     upstream_timeout: int = Field(default=900, alias="UPSTREAM_TIMEOUT")

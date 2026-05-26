@@ -115,9 +115,17 @@ async def maybe_apply_vision(request: MessageRequest) -> MessageRequest:
     if not images:
         return request
 
-    logger.info(f"[Vision] processing {len(images)} image(s) via {settings.vision_model}")
+    # Respect VISION_MAX_IMAGES: only describe up to the limit; pass extras through.
+    max_imgs = settings.vision_max_images
+    to_describe = images[:max_imgs]
+    passthrough = images[max_imgs:]
 
-    # Describe all images in parallel
+    logger.info(
+        f"[Vision] processing {len(to_describe)} image(s) via {settings.vision_model}"
+        + (f", {len(passthrough)} passed through (limit={max_imgs})" if passthrough else "")
+    )
+
+    # Describe images in parallel
     tasks = [
         _describe_image(
             image_data=img["data"],
@@ -125,12 +133,12 @@ async def maybe_apply_vision(request: MessageRequest) -> MessageRequest:
             image_url=img["url"],
             index=img["image_index"],
         )
-        for img in images
+        for img in to_describe
     ]
     captions = await asyncio.gather(*tasks)
 
     # Substitute image blocks with text blocks in the raw message list
-    for img, caption in zip(images, captions):
+    for img, caption in zip(to_describe, captions):
         msg = messages_raw[img["msg_idx"]]
         content = msg.get("content", [])
         content[img["block_idx"]] = {

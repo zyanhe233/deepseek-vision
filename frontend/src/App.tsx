@@ -222,6 +222,7 @@ interface FormState {
   visModel: string
   searchProvider: string
   searchKey: string
+  visMaxImages: string
   webSearch: boolean
   webFetch: boolean
   port: string
@@ -232,12 +233,13 @@ const DEFAULTS: FormState = {
   masterKeys: [''],
   dsKey: '',
   dsUrl: 'https://api.deepseek.com/anthropic',
-  dsModels: 'deepseek-chat,deepseek-reasoner',
+  dsModels: 'deepseek-v4-pro,deepseek-v4-flash',
   visUrl: '',
   visKey: '',
   visModel: '',
   searchProvider: 'tavily',
   searchKey: '',
+  visMaxImages: '5',
   webSearch: false,
   webFetch: false,
   port: '8000',
@@ -262,6 +264,7 @@ function buildEnvText(f: FormState): string {
     envLine('VISION_BASE_URL', f.visUrl),
     envLine('VISION_API_KEY', f.visKey),
     envLine('VISION_MODEL', f.visModel),
+    envLine('VISION_MAX_IMAGES', f.visMaxImages),
     '',
     '# 联网搜索（可选）',
     `WEB_SEARCH_PROVIDER=${f.searchProvider}`,
@@ -457,6 +460,13 @@ function ConfigSection() {
                 className={filledClass(form.visModel)}
               />
             </Field>
+            <Field label="VISION_MAX_IMAGES" hint="单次请求最多处理的图片数量（默认 5，超出部分直接透传）">
+              <input
+                type="text"
+                value={form.visMaxImages}
+                onChange={e => set('visMaxImages', e.target.value)}
+              />
+            </Field>
           </div>
         </div>
 
@@ -592,9 +602,9 @@ export default function App() {
   return (
     <div className="layout">
       <header>
-        <span className="header-logo">👁</span>
+        <img src="/icon.png" alt="logo" style={{width:32,height:32,borderRadius:8,objectFit:"cover"}} />
         <span className="header-title">deepseek-vision</span>
-        <span className="header-badge">控制台</span>
+        <span className="header-badge">配置器</span>
         <div className="header-live">
           <div className={`live-dot ${liveClass}`} />
           <span>{liveLabel}</span>
