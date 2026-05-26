@@ -3,834 +3,559 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>deepseek-vision</title>
+<title>deepseek-vision · Dashboard</title>
 <style>
-  :root {
-    --bg: #0f1117;
-    --bg2: #1a1d27;
-    --bg3: #232636;
-    --border: #2e3147;
-    --accent: #5b7cf6;
-    --accent2: #7c9bff;
-    --text: #e4e6f0;
-    --text2: #9095b0;
-    --text3: #6b7194;
-    --user-bg: #1e2d5a;
-    --assistant-bg: #1a1d27;
-    --danger: #e05c5c;
-    --success: #4cbb8a;
-    --radius: 12px;
-    --radius-sm: 8px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100dvh;
-    display: flex;
-    overflow: hidden;
-  }
+:root {
+  --bg:       #0f1117;
+  --bg2:      #1a1d27;
+  --bg3:      #232636;
+  --border:   #2e3147;
+  --accent:   #5b7cf6;
+  --accent2:  #7c9bff;
+  --text:     #e4e6f0;
+  --text2:    #9095b0;
+  --text3:    #6b7194;
+  --ok:       #4cbb8a;
+  --warn:     #e0a855;
+  --err:      #e05c5c;
+  --radius:   12px;
+  --rsm:      8px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg); color: var(--text);
+  min-height: 100vh;
+}
 
-  /* ── Sidebar ── */
-  #sidebar {
-    width: 260px;
-    min-width: 260px;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 20px 16px;
-    gap: 16px;
-    overflow-y: auto;
-  }
-  #sidebar h1 {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--accent2);
-    letter-spacing: .3px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  #sidebar h1 span.logo { font-size: 20px; }
-  .sidebar-section { display: flex; flex-direction: column; gap: 6px; }
-  .sidebar-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .8px;
-    color: var(--text3);
-  }
-  select, input[type="text"], input[type="password"], textarea {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-size: 13px;
-    padding: 8px 10px;
-    width: 100%;
-    outline: none;
-    transition: border-color .15s;
-  }
-  select:focus, input:focus, textarea:focus { border-color: var(--accent); }
-  textarea { resize: vertical; min-height: 80px; font-family: inherit; line-height: 1.5; }
+/* ── Top bar ── */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 54px;
+  display: flex; align-items: center; gap: 14px;
+  position: sticky; top: 0; z-index: 10;
+}
+header .logo { font-size: 22px; }
+header h1 { font-size: 15px; font-weight: 700; color: var(--accent2); letter-spacing: .3px; }
+header .version { font-size: 11px; color: var(--text3); }
+#dot-alive {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text2);
+}
+#dot-alive .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text3);
+  transition: background .3s;
+}
+#dot-alive .dot.ok  { background: var(--ok); }
+#dot-alive .dot.err { background: var(--err); }
 
-  .toggle-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 13px;
-    color: var(--text2);
-    padding: 4px 0;
-  }
-  .toggle-row label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
-  /* toggle switch */
-  .toggle {
-    position: relative; width: 36px; height: 20px;
-    display: inline-block; flex-shrink: 0;
-  }
-  .toggle input { opacity: 0; width: 0; height: 0; }
-  .toggle-track {
-    position: absolute; inset: 0;
-    background: var(--border);
-    border-radius: 20px;
-    cursor: pointer;
-    transition: background .2s;
-  }
-  .toggle input:checked + .toggle-track { background: var(--accent); }
-  .toggle-track::after {
-    content: "";
-    position: absolute;
-    width: 14px; height: 14px;
-    background: #fff;
-    border-radius: 50%;
-    top: 3px; left: 3px;
-    transition: transform .2s;
-  }
-  .toggle input:checked + .toggle-track::after { transform: translateX(16px); }
+/* ── Layout ── */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+  display: flex; flex-direction: column; gap: 28px;
+}
 
-  #btn-new-chat {
-    margin-top: auto;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    padding: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity .15s;
-  }
-  #btn-new-chat:hover { opacity: .85; }
+/* ── Section ── */
+.section { display: flex; flex-direction: column; gap: 12px; }
+.section-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .9px;
+  color: var(--text3);
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: "";
+  flex: 1; height: 1px; background: var(--border);
+}
 
-  /* ── Main ── */
-  #main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+/* ── Card ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+}
 
-  /* ── Messages ── */
-  #messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 24px 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-  }
-  #messages::-webkit-scrollbar { width: 5px; }
-  #messages::-webkit-scrollbar-track { background: transparent; }
-  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+/* ── Status cards grid ── */
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.status-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.status-card .sc-label {
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .7px;
+  color: var(--text3);
+}
+.status-card .sc-value {
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.status-card .sc-sub {
+  font-size: 12px; color: var(--text2);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.pill.ok   { background: rgba(76,187,138,.15); color: var(--ok); }
+.pill.warn { background: rgba(224,168,85,.15);  color: var(--warn); }
+.pill.err  { background: rgba(224,92,92,.15);   color: var(--err); }
+.pill::before { content: "●"; font-size: 8px; }
 
-  .msg {
-    padding: 16px 24px;
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    max-width: 900px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .msg-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-  .msg.user .msg-avatar { background: var(--user-bg); }
-  .msg.assistant .msg-avatar { background: var(--bg3); }
-  .msg-body { flex: 1; min-width: 0; }
-  .msg-role {
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text3);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-  }
-  .msg-content {
-    font-size: 14.5px;
-    line-height: 1.7;
-    color: var(--text);
-    white-space: pre-wrap;
-    word-break: break-word;
-  }
-  .msg-content code {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 1px 5px;
-    font-size: 13px;
-    font-family: "SF Mono", "Fira Code", monospace;
-  }
-  .msg-content pre {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 14px;
-    overflow-x: auto;
-    margin: 8px 0;
-    font-size: 13px;
-    line-height: 1.6;
-  }
-  .msg-content pre code { background: none; border: none; padding: 0; }
+/* ── Models list ── */
+.model-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.model-tag {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 12px; color: var(--text2);
+  font-family: "SF Mono", "Fira Code", monospace;
+}
 
-  /* image thumbnails in messages */
-  .msg-images {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;
-  }
-  .msg-img-thumb {
-    width: 80px; height: 80px;
-    object-fit: cover;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-  }
+/* ── Config form ── */
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--text2); }
+.field input, .field select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--rsm);
+  color: var(--text);
+  font-size: 13px;
+  padding: 9px 11px;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+.field .hint { font-size: 11px; color: var(--text3); line-height: 1.5; }
+.field input.has-value { border-color: var(--ok); }
 
-  /* tool use indicator */
-  .tool-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 3px 10px;
-    font-size: 12px;
-    color: var(--text2);
-    margin-bottom: 8px;
-  }
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
 
-  /* thinking block */
-  .thinking-block {
-    background: var(--bg3);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    color: var(--text2);
-    line-height: 1.6;
-  }
-  .thinking-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
+.form-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding-top: 4px;
+}
 
-  #empty-state {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    color: var(--text3);
-    pointer-events: none;
-  }
-  #empty-state .big-logo { font-size: 48px; }
-  #empty-state h2 { font-size: 20px; color: var(--text2); font-weight: 600; }
-  #empty-state p { font-size: 13.5px; text-align: center; max-width: 360px; line-height: 1.6; }
+button.btn {
+  padding: 9px 20px;
+  border-radius: var(--rsm);
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s;
+}
+button.btn:hover { opacity: .85; }
+button.btn-primary { background: var(--accent); color: #fff; }
+button.btn-ghost {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
 
-  /* ── Image previews above input ── */
-  #image-previews {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 0 24px 8px;
-    max-width: 900px;
-    width: 100%;
-    margin: 0 auto;
-  }
-  .preview-wrap {
-    position: relative;
-    width: 68px; height: 68px;
-  }
-  .preview-wrap img {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-  }
-  .preview-remove {
-    position: absolute;
-    top: -6px; right: -6px;
-    width: 18px; height: 18px;
-    background: var(--danger);
-    border: none; border-radius: 50%;
-    color: #fff; font-size: 11px;
-    cursor: pointer; display: flex;
-    align-items: center; justify-content: center;
-    line-height: 1;
-  }
+/* ── .env preview ── */
+.env-preview {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--rsm);
+  padding: 14px 16px;
+  font-size: 12.5px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--text2);
+  white-space: pre;
+  overflow-x: auto;
+  line-height: 1.8;
+}
+.env-preview .key   { color: var(--accent2); }
+.env-preview .val   { color: var(--ok); }
+.env-preview .comment { color: var(--text3); }
 
-  /* ── Input bar ── */
-  #input-area {
-    border-top: 1px solid var(--border);
-    padding: 16px 24px 20px;
-    background: var(--bg);
-  }
-  #input-wrap {
-    max-width: 900px;
-    margin: 0 auto;
-    position: relative;
-    display: flex;
-    align-items: flex-end;
-    gap: 8px;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    transition: border-color .15s;
-  }
-  #input-wrap:focus-within { border-color: var(--accent); }
-  #input-wrap.drag-over { border-color: var(--accent2); background: #1e2342; }
+/* ── Copy button ── */
+.copy-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--rsm);
+  color: var(--text2); font-size: 12px;
+  padding: 4px 12px; cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--text3); }
+.copy-btn.copied { color: var(--ok); border-color: var(--ok); }
 
-  #input-attach {
-    background: none;
-    border: none;
-    color: var(--text3);
-    cursor: pointer;
-    padding: 4px 6px;
-    border-radius: 6px;
-    font-size: 18px;
-    line-height: 1;
-    flex-shrink: 0;
-    transition: color .15s;
-  }
-  #input-attach:hover { color: var(--text); }
-  #file-input { display: none; }
-
-  #prompt-input {
-    flex: 1;
-    background: none;
-    border: none;
-    color: var(--text);
-    font-size: 14px;
-    font-family: inherit;
-    line-height: 1.6;
-    resize: none;
-    max-height: 200px;
-    outline: none;
-    padding: 4px 0;
-  }
-  #prompt-input::placeholder { color: var(--text3); }
-
-  #btn-send {
-    background: var(--accent);
-    border: none;
-    border-radius: var(--radius-sm);
-    color: #fff;
-    width: 36px; height: 36px;
-    font-size: 16px;
-    cursor: pointer;
-    flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    transition: opacity .15s;
-  }
-  #btn-send:disabled { opacity: .4; cursor: default; }
-  #btn-send:not(:disabled):hover { opacity: .85; }
-
-  #status-bar {
-    max-width: 900px;
-    margin: 6px auto 0;
-    font-size: 12px;
-    color: var(--text3);
-    min-height: 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .dot-blink {
-    display: inline-block;
-    animation: blink 1s infinite;
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-
-  /* ── Error toast ── */
-  #toast {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    background: var(--danger);
-    color: #fff;
-    padding: 12px 18px;
-    border-radius: var(--radius-sm);
-    font-size: 13px;
-    max-width: 320px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.4);
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity .2s, transform .2s;
-    pointer-events: none;
-    z-index: 999;
-  }
-  #toast.show { opacity: 1; transform: translateY(0); }
-
-  /* ── Responsive ── */
-  @media (max-width: 640px) {
-    #sidebar { display: none; }
-    .msg { padding: 12px 16px; }
-    #input-area { padding: 12px 16px 16px; }
-  }
+/* ── Refresh indicator ── */
+.refresh-label {
+  font-size: 11px; color: var(--text3);
+  display: flex; align-items: center; gap: 5px;
+}
+.spin { display: inline-block; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside id="sidebar">
-  <h1><span class="logo">👁</span> deepseek-vision</h1>
-
-  <div class="sidebar-section">
-    <div class="sidebar-label">API Key</div>
-    <input type="password" id="api-key" placeholder="sk-..." />
+<header>
+  <span class="logo">👁</span>
+  <h1>deepseek-vision</h1>
+  <span class="version">Dashboard</span>
+  <div id="dot-alive">
+    <div class="dot" id="alive-dot"></div>
+    <span id="alive-label">checking…</span>
   </div>
+</header>
 
-  <div class="sidebar-section">
-    <div class="sidebar-label">Model</div>
-    <select id="model-select">
-      <option value="">Loading…</option>
-    </select>
-  </div>
+<main>
 
-  <div class="sidebar-section">
-    <div class="sidebar-label">System Prompt</div>
-    <textarea id="system-prompt" placeholder="Optional system instructions…" rows="4"></textarea>
-  </div>
-
-  <div class="sidebar-section">
-    <div class="sidebar-label">Tools</div>
-    <div class="toggle-row">
-      <span>Web Search</span>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-search" />
-        <div class="toggle-track"></div>
-      </label>
+  <!-- ── Status ── -->
+  <div class="section">
+    <div class="section-title">Service Status
+      <span id="refresh-spin" class="refresh-label" style="margin-left:auto;font-weight:normal"></span>
     </div>
-    <div class="toggle-row">
-      <span>Web Fetch</span>
-      <label class="toggle">
-        <input type="checkbox" id="toggle-fetch" />
-        <div class="toggle-track"></div>
-      </label>
+    <div class="status-grid" id="status-grid">
+      <!-- filled by JS -->
     </div>
   </div>
 
-  <div class="sidebar-section">
-    <div class="sidebar-label">Max Tokens</div>
-    <input type="text" id="max-tokens" value="4096" />
-  </div>
-
-  <button id="btn-new-chat">＋ New Chat</button>
-</aside>
-
-<!-- Main -->
-<div id="main">
-  <div id="messages">
-    <div id="empty-state">
-      <div class="big-logo">👁</div>
-      <h2>deepseek-vision</h2>
-      <p>Chat with DeepSeek models. Drop an image anywhere to attach it — the proxy will describe it automatically if needed.</p>
+  <!-- ── Models ── -->
+  <div class="section">
+    <div class="section-title">Available Models</div>
+    <div class="card">
+      <div class="model-list" id="model-list">
+        <span style="color:var(--text3);font-size:13px">Loading…</span>
+      </div>
     </div>
   </div>
 
-  <div id="image-previews"></div>
+  <!-- ── Configuration wizard ── -->
+  <div class="section">
+    <div class="section-title">Configuration</div>
+    <div class="card" style="display:flex;flex-direction:column;gap:22px">
 
-  <div id="input-area">
-    <div id="input-wrap">
-      <button id="input-attach" title="Attach image">📎</button>
-      <input type="file" id="file-input" accept="image/*" multiple />
-      <textarea id="prompt-input" placeholder="Message… (Shift+Enter for newline)" rows="1"></textarea>
-      <button id="btn-send" disabled>↑</button>
+      <!-- DeepSeek -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px">DeepSeek Upstream</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>DEEPSEEK_API_KEY</label>
+            <input type="password" id="f-ds-key" placeholder="sk-…" autocomplete="off" />
+            <span class="hint">Required. Your DeepSeek API key.</span>
+          </div>
+          <div class="field">
+            <label>DEEPSEEK_BASE_URL</label>
+            <input type="text" id="f-ds-url" value="https://api.deepseek.com/anthropic" />
+            <span class="hint">Leave default unless using a mirror.</span>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>DEEPSEEK_MODELS</label>
+            <input type="text" id="f-ds-models" value="deepseek-chat,deepseek-reasoner" />
+            <span class="hint">Comma-separated. Use <code>client-id:upstream-id</code> to alias. e.g. <code>fast:deepseek-chat,smart:deepseek-reasoner</code></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auth -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px">Proxy Auth</div>
+        <div class="form-grid">
+          <div class="field" style="grid-column:1/-1">
+            <label>MASTER_API_KEY</label>
+            <input type="password" id="f-master-key" placeholder="sk-your-secret-key" autocomplete="off" />
+            <span class="hint">Required. Keys accepted by this proxy (comma-separated for multiple).</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vision -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px">Vision Middleware <span style="color:var(--text3);font-weight:400;font-size:12px">— optional</span></div>
+        <div class="form-grid">
+          <div class="field">
+            <label>VISION_BASE_URL</label>
+            <input type="text" id="f-vis-url" placeholder="https://api.openai.com/v1" />
+            <span class="hint">Any OpenAI-compatible vision endpoint.</span>
+          </div>
+          <div class="field">
+            <label>VISION_API_KEY</label>
+            <input type="password" id="f-vis-key" placeholder="sk-…" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label>VISION_MODEL</label>
+            <input type="text" id="f-vis-model" placeholder="gpt-4o-mini" />
+            <span class="hint">e.g. gpt-4o-mini, qwen-vl-max, glm-4v</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Web Search -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px">Web Search <span style="color:var(--text3);font-weight:400;font-size:12px">— optional</span></div>
+        <div class="form-grid">
+          <div class="field">
+            <label>WEB_SEARCH_PROVIDER</label>
+            <select id="f-search-provider">
+              <option value="tavily">Tavily</option>
+              <option value="brave">Brave</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>TAVILY_API_KEY / BRAVE_API_KEY</label>
+            <input type="password" id="f-search-key" placeholder="tvly-… or BSA-…" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Server -->
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:12px">Server</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>PORT</label>
+            <input type="text" id="f-port" value="8000" />
+          </div>
+          <div class="field">
+            <label>LOG_LEVEL</label>
+            <select id="f-log-level">
+              <option value="INFO">INFO</option>
+              <option value="DEBUG">DEBUG</option>
+              <option value="WARNING">WARNING</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="resetForm()">Reset</button>
+        <button class="btn btn-primary" onclick="generateEnv()">Generate .env</button>
+      </div>
     </div>
-    <div id="status-bar"></div>
   </div>
-</div>
 
-<div id="toast"></div>
+  <!-- ── .env output ── -->
+  <div class="section" id="env-section" style="display:none">
+    <div class="section-title" style="display:flex;align-items:center;gap:10px">
+      Generated .env
+      <button class="copy-btn" id="copy-btn" onclick="copyEnv()">Copy</button>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="env-preview" id="env-output"></div>
+    </div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.7">
+      Save this as <code style="color:var(--text2)">.env</code> in the project root, then run:<br>
+      <code style="color:var(--accent2)">docker build -t deepseek-vision . &amp;&amp; docker run --env-file .env -p 8000:8000 deepseek-vision</code>
+    </div>
+  </div>
+
+</main>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-const history = [];          // {role, content: [{type,text}|{type,source}|…]}
-const attachedImages = [];   // {dataUrl, base64, mediaType}
+// ── Liveness poll ──────────────────────────────────────────────────────────
+const $dot   = document.getElementById('alive-dot');
+const $label = document.getElementById('alive-label');
+const $spin  = document.getElementById('refresh-spin');
 
-// ── Persist API key ────────────────────────────────────────────────────────
-const $apiKey     = document.getElementById('api-key');
-const $model      = document.getElementById('model-select');
-const $system     = document.getElementById('system-prompt');
-const $maxTokens  = document.getElementById('max-tokens');
-const $search     = document.getElementById('toggle-search');
-const $fetch      = document.getElementById('toggle-fetch');
-const $messages   = document.getElementById('messages');
-const $empty      = document.getElementById('empty-state');
-const $previews   = document.getElementById('image-previews');
-const $input      = document.getElementById('prompt-input');
-const $sendBtn    = document.getElementById('btn-send');
-const $statusBar  = document.getElementById('status-bar');
-const $toast      = document.getElementById('toast');
-const $fileInput  = document.getElementById('file-input');
-const $attach     = document.getElementById('input-attach');
-const $inputWrap  = document.getElementById('input-wrap');
-const $newChat    = document.getElementById('btn-new-chat');
-
-$apiKey.value = localStorage.getItem('dsv_api_key') || '';
-$apiKey.addEventListener('input', () => {
-  localStorage.setItem('dsv_api_key', $apiKey.value.trim());
-  loadModels();
-});
-
-// ── Load models ────────────────────────────────────────────────────────────
-async function loadModels() {
-  const key = $apiKey.value.trim();
-  if (!key) return;
+async function pollStatus() {
+  $spin.innerHTML = '<span class="spin">⟳</span> refreshing';
   try {
-    const r = await fetch('/v1/models', { headers: { 'x-api-key': key } });
-    if (!r.ok) return;
+    const r = await fetch('/status');
+    if (!r.ok) throw new Error('http ' + r.status);
     const data = await r.json();
-    const models = data.data || [];
-    $model.innerHTML = models.map(m =>
-      `<option value="${m.id}">${m.id}</option>`
-    ).join('');
-    if (!models.length) $model.innerHTML = '<option value="">No models</option>';
-  } catch { /* ignore */ }
-}
-loadModels();
-
-// ── Auto-resize textarea ───────────────────────────────────────────────────
-$input.addEventListener('input', () => {
-  $input.style.height = 'auto';
-  $input.style.height = Math.min($input.scrollHeight, 200) + 'px';
-  $sendBtn.disabled = !$input.value.trim() && attachedImages.length === 0;
-});
-
-// ── Send on Enter (Shift+Enter = newline) ──────────────────────────────────
-$input.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-});
-
-$sendBtn.addEventListener('click', sendMessage);
-
-// ── New chat ───────────────────────────────────────────────────────────────
-$newChat.addEventListener('click', () => {
-  history.length = 0;
-  attachedImages.length = 0;
-  $previews.innerHTML = '';
-  $messages.innerHTML = '';
-  $messages.appendChild($empty);
-  $empty.style.display = '';
-  $input.value = '';
-  $input.style.height = 'auto';
-  $sendBtn.disabled = true;
-  $statusBar.textContent = '';
-});
-
-// ── Image attachment ───────────────────────────────────────────────────────
-$attach.addEventListener('click', () => $fileInput.click());
-$fileInput.addEventListener('change', () => {
-  [...$fileInput.files].forEach(addImageFile);
-  $fileInput.value = '';
-});
-
-// Drag & drop
-$inputWrap.addEventListener('dragover', e => { e.preventDefault(); $inputWrap.classList.add('drag-over'); });
-$inputWrap.addEventListener('dragleave', () => $inputWrap.classList.remove('drag-over'));
-$inputWrap.addEventListener('drop', e => {
-  e.preventDefault();
-  $inputWrap.classList.remove('drag-over');
-  [...(e.dataTransfer.files || [])].filter(f => f.type.startsWith('image/')).forEach(addImageFile);
-});
-
-// Paste image
-document.addEventListener('paste', e => {
-  const items = e.clipboardData?.items || [];
-  for (const item of items) {
-    if (item.type.startsWith('image/')) {
-      addImageFile(item.getAsFile());
-    }
+    $dot.className = 'dot ok';
+    $label.textContent = 'online';
+    renderStatus(data);
+    renderModels(data.models || []);
+  } catch {
+    $dot.className = 'dot err';
+    $label.textContent = 'offline';
+    renderStatusOffline();
+  } finally {
+    $spin.innerHTML = '';
   }
-});
-
-function addImageFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const dataUrl = ev.target.result;
-    const [header, b64] = dataUrl.split(',');
-    const mediaType = header.replace('data:', '').replace(';base64', '');
-    attachedImages.push({ dataUrl, base64: b64, mediaType });
-    renderPreviews();
-    $sendBtn.disabled = false;
-  };
-  reader.readAsDataURL(file);
 }
 
-function renderPreviews() {
-  $previews.innerHTML = '';
-  attachedImages.forEach((img, i) => {
-    const wrap = document.createElement('div');
-    wrap.className = 'preview-wrap';
-    wrap.innerHTML = `
-      <img src="${img.dataUrl}" alt="attachment ${i+1}" />
-      <button class="preview-remove" data-i="${i}" title="Remove">×</button>
-    `;
-    $previews.appendChild(wrap);
-  });
-  $previews.querySelectorAll('.preview-remove').forEach(btn => {
-    btn.addEventListener('click', () => {
-      attachedImages.splice(+btn.dataset.i, 1);
-      renderPreviews();
-      if (!$input.value.trim() && attachedImages.length === 0) $sendBtn.disabled = true;
-    });
-  });
+// ── Render status cards ────────────────────────────────────────────────────
+const $grid = document.getElementById('status-grid');
+
+function pill(ok, yes = 'Enabled', no = 'Not configured') {
+  return ok
+    ? `<span class="pill ok">${yes}</span>`
+    : `<span class="pill warn">${no}</span>`;
 }
 
-// ── Render markdown (minimal) ──────────────────────────────────────────────
-function renderMarkdown(text) {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/```([\s\S]*?)```/g, (_, code) => `<pre><code>${code.trim()}</code></pre>`)
-    .replace(/`([^`]+)`/g, (_, c) => `<code>${c}</code>`)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^#{1,3} (.+)$/gm, (_, h) => `<strong>${h}</strong>`)
-    .replace(/\n/g, '<br>');
-}
+function renderStatus(d) {
+  const backends = d.backends || [];
+  const backendNames = backends.map(b => b.name).join(', ') || '—';
 
-// ── Append message bubble ──────────────────────────────────────────────────
-function appendBubble(role, images = []) {
-  $empty.style.display = 'none';
-  const div = document.createElement('div');
-  div.className = `msg ${role}`;
-  const emoji = role === 'user' ? '🧑' : '🤖';
-  const label = role === 'user' ? 'You' : 'Assistant';
-
-  let imgsHtml = '';
-  if (images.length) {
-    imgsHtml = `<div class="msg-images">${
-      images.map(src => `<img class="msg-img-thumb" src="${src}" />`).join('')
-    }</div>`;
-  }
-
-  div.innerHTML = `
-    <div class="msg-avatar">${emoji}</div>
-    <div class="msg-body">
-      <div class="msg-role">${label}</div>
-      ${imgsHtml}
-      <div class="msg-content"></div>
+  $grid.innerHTML = `
+    <div class="status-card">
+      <div class="sc-label">Proxy</div>
+      <div>${pill(true, 'Running', '')}</div>
+    </div>
+    <div class="status-card">
+      <div class="sc-label">Backends</div>
+      <div class="sc-value">${backendNames}</div>
+      <div class="sc-sub">${d.models?.length || 0} model(s) registered</div>
+    </div>
+    <div class="status-card">
+      <div class="sc-label">Vision</div>
+      <div>${pill(d.vision?.enabled)}</div>
+      ${d.vision?.enabled ? `<div class="sc-sub">${d.vision.model}</div>` : ''}
+    </div>
+    <div class="status-card">
+      <div class="sc-label">Web Search</div>
+      <div>${pill(d.web_search?.enabled)}</div>
+      ${d.web_search?.enabled ? `<div class="sc-sub">${d.web_search.provider}</div>` : ''}
+    </div>
+    <div class="status-card">
+      <div class="sc-label">Web Fetch</div>
+      <div>${pill(true, 'Ready', '')}</div>
     </div>
   `;
-  $messages.appendChild(div);
-  scrollBottom();
-  return div.querySelector('.msg-content');
 }
 
-function scrollBottom() {
-  $messages.scrollTop = $messages.scrollHeight;
+function renderStatusOffline() {
+  $grid.innerHTML = `
+    <div class="status-card">
+      <div class="sc-label">Proxy</div>
+      <div><span class="pill err">Offline</span></div>
+    </div>
+  `;
 }
 
-// ── Status helpers ─────────────────────────────────────────────────────────
-function setStatus(msg) {
-  $statusBar.innerHTML = msg ? `<span class="dot-blink">●</span> ${msg}` : '';
-}
-
-let _toastTimer;
-function showToast(msg) {
-  $toast.textContent = msg;
-  $toast.classList.add('show');
-  clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(() => $toast.classList.remove('show'), 4000);
-}
-
-// ── Build tools list ───────────────────────────────────────────────────────
-function buildTools() {
-  const tools = [];
-  if ($search.checked) tools.push({ type: 'web_search_20260209', max_uses: 3 });
-  if ($fetch.checked)  tools.push({ type: 'web_fetch_20260209',  max_uses: 5 });
-  return tools.length ? tools : undefined;
-}
-
-// ── Send ───────────────────────────────────────────────────────────────────
-async function sendMessage() {
-  const key = $apiKey.value.trim();
-  if (!key) { showToast('Enter your API key in the sidebar first.'); return; }
-
-  const text = $input.value.trim();
-  if (!text && attachedImages.length === 0) return;
-
-  $sendBtn.disabled = true;
-
-  // Build user content blocks
-  const contentBlocks = [];
-  const thumbUrls = [];
-
-  for (const img of attachedImages) {
-    contentBlocks.push({
-      type: 'image',
-      source: { type: 'base64', media_type: img.mediaType, data: img.base64 },
-    });
-    thumbUrls.push(img.dataUrl);
+// ── Render model tags ──────────────────────────────────────────────────────
+const $modelList = document.getElementById('model-list');
+function renderModels(models) {
+  if (!models.length) {
+    $modelList.innerHTML = '<span style="color:var(--text3);font-size:13px">No models registered — check DEEPSEEK_API_KEY.</span>';
+    return;
   }
-  if (text) contentBlocks.push({ type: 'text', text });
-
-  // Add to history
-  history.push({ role: 'user', content: contentBlocks });
-
-  // Render user bubble
-  appendBubble('user', thumbUrls);
-  const userContent = $messages.lastElementChild.querySelector('.msg-content');
-  if (text) userContent.innerHTML = renderMarkdown(text);
-
-  // Clear input
-  $input.value = '';
-  $input.style.height = 'auto';
-  attachedImages.length = 0;
-  $previews.innerHTML = '';
-
-  // Render assistant bubble (streaming target)
-  const assistantContent = appendBubble('assistant');
-  setStatus('Thinking…');
-
-  // Build request
-  const model = $model.value;
-  const systemText = $system.value.trim();
-  const body = {
-    model,
-    messages: history,
-    max_tokens: parseInt($maxTokens.value) || 4096,
-    stream: true,
-    ...(systemText && { system: systemText }),
-  };
-  const tools = buildTools();
-  if (tools) body.tools = tools;
-
-  // Beta headers for tool types
-  const betas = [];
-  if ($search.checked) betas.push('web-search-2026-02-09');
-  if ($fetch.checked)  betas.push('web-fetch-2026-02-09');
-
-  try {
-    const res = await fetch('/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        ...(betas.length && { 'anthropic-beta': betas.join(',') }),
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: { message: res.statusText } }));
-      throw new Error((err.error || {}).message || `HTTP ${res.status}`);
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    let fullText = '';
-    let hasContent = false;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buf += decoder.decode(value, { stream: true });
-
-      const parts = buf.split('\n\n');
-      buf = parts.pop(); // keep incomplete chunk
-
-      for (const part of parts) {
-        const lines = part.split('\n');
-        let eventType = '';
-        let dataStr = '';
-        for (const line of lines) {
-          if (line.startsWith('event:')) eventType = line.slice(6).trim();
-          if (line.startsWith('data:'))  dataStr  = line.slice(5).trim();
-        }
-        if (!dataStr) continue;
-        let obj;
-        try { obj = JSON.parse(dataStr); } catch { continue; }
-
-        if (eventType === 'ping') continue;
-
-        if (obj.type === 'content_block_delta') {
-          const delta = obj.delta || {};
-          if (delta.type === 'text_delta') {
-            fullText += delta.text || '';
-            hasContent = true;
-            assistantContent.innerHTML = renderMarkdown(fullText);
-            scrollBottom();
-            setStatus('Generating…');
-          }
-        } else if (obj.type === 'content_block_start') {
-          const block = obj.content_block || {};
-          if (block.type === 'server_tool_use') {
-            const badge = document.createElement('div');
-            badge.className = 'tool-badge';
-            badge.innerHTML = `🔍 Searching: <em>${JSON.stringify(block.input || {})}</em>`;
-            assistantContent.before(badge);
-            setStatus('Searching…');
-          } else if (block.type === 'thinking') {
-            setStatus('Thinking…');
-          }
-        } else if (obj.type === 'message_delta') {
-          const usage = obj.usage || {};
-          const sr = (obj.delta || {}).stop_reason;
-          if (sr) setStatus(`Done · in=${usage.input_tokens || '?'} out=${usage.output_tokens || '?'}`);
-        } else if (obj.type === 'error') {
-          const e = obj.error || {};
-          throw new Error(e.message || 'stream error');
-        }
-      }
-    }
-
-    if (!hasContent && fullText === '') {
-      assistantContent.innerHTML = '<em style="color:var(--text3)">No text response.</em>';
-    }
-
-    // Add assistant reply to history
-    history.push({
-      role: 'assistant',
-      content: [{ type: 'text', text: fullText }],
-    });
-
-  } catch (err) {
-    assistantContent.innerHTML = `<span style="color:var(--danger)">Error: ${err.message}</span>`;
-    showToast(err.message);
-    setStatus('');
-    // Remove last user turn so user can retry
-    if (history[history.length - 1]?.role === 'user') history.pop();
-  } finally {
-    $sendBtn.disabled = false;
-    setTimeout(() => setStatus(''), 3000);
-  }
+  $modelList.innerHTML = models.map(m =>
+    `<span class="model-tag">${m}</span>`
+  ).join('');
 }
+
+// ── Generate .env ──────────────────────────────────────────────────────────
+let _generatedEnv = '';
+
+function v(id) { return document.getElementById(id)?.value?.trim() || ''; }
+
+function line(key, val, comment) {
+  if (!val) return `<span class="comment"># ${key}=</span>`;
+  return `<span class="key">${key}</span>=<span class="val">${val}</span>` +
+         (comment ? `  <span class="comment"># ${comment}</span>` : '');
+}
+
+function rawLine(key, val) {
+  return val ? `${key}=${val}` : `# ${key}=`;
+}
+
+function generateEnv() {
+  const dsKey      = v('f-ds-key');
+  const dsUrl      = v('f-ds-url') || 'https://api.deepseek.com/anthropic';
+  const dsModels   = v('f-ds-models') || 'deepseek-chat,deepseek-reasoner';
+  const masterKey  = v('f-master-key');
+  const visUrl     = v('f-vis-url');
+  const visKey     = v('f-vis-key');
+  const visModel   = v('f-vis-model');
+  const provider   = v('f-search-provider') || 'tavily';
+  const searchKey  = v('f-search-key');
+  const port       = v('f-port') || '8000';
+  const logLevel   = v('f-log-level') || 'INFO';
+
+  const isTavily = provider === 'tavily';
+
+  // Raw text for clipboard
+  _generatedEnv = [
+    `# Required`,
+    rawLine('MASTER_API_KEY', masterKey),
+    rawLine('DEEPSEEK_API_KEY', dsKey),
+    `DEEPSEEK_BASE_URL=${dsUrl}`,
+    `DEEPSEEK_MODELS=${dsModels}`,
+    ``,
+    `# Vision (optional — describe images for text-only models)`,
+    rawLine('VISION_BASE_URL', visUrl),
+    rawLine('VISION_API_KEY', visKey),
+    rawLine('VISION_MODEL', visModel),
+    ``,
+    `# Web Search (optional)`,
+    `WEB_SEARCH_PROVIDER=${provider}`,
+    isTavily ? rawLine('TAVILY_API_KEY', searchKey) : rawLine('BRAVE_API_KEY', searchKey),
+    ``,
+    `# Server`,
+    `PORT=${port}`,
+    `LOG_LEVEL=${logLevel}`,
+  ].join('\n');
+
+  // Highlighted HTML
+  const html = [
+    `<span class="comment"># Required</span>`,
+    line('MASTER_API_KEY', masterKey),
+    line('DEEPSEEK_API_KEY', dsKey),
+    line('DEEPSEEK_BASE_URL', dsUrl),
+    line('DEEPSEEK_MODELS', dsModels),
+    ``,
+    `<span class="comment"># Vision (optional)</span>`,
+    line('VISION_BASE_URL', visUrl),
+    line('VISION_API_KEY', visKey),
+    line('VISION_MODEL', visModel),
+    ``,
+    `<span class="comment"># Web Search (optional)</span>`,
+    `<span class="key">WEB_SEARCH_PROVIDER</span>=<span class="val">${provider}</span>`,
+    isTavily ? line('TAVILY_API_KEY', searchKey) : line('BRAVE_API_KEY', searchKey),
+    ``,
+    `<span class="comment"># Server</span>`,
+    `<span class="key">PORT</span>=<span class="val">${port}</span>`,
+    `<span class="key">LOG_LEVEL</span>=<span class="val">${logLevel}</span>`,
+  ].join('\n');
+
+  document.getElementById('env-output').innerHTML = html;
+  document.getElementById('env-section').style.display = '';
+  document.getElementById('env-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function resetForm() {
+  ['f-ds-key','f-master-key','f-vis-url','f-vis-key','f-vis-model','f-search-key'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-ds-url').value    = 'https://api.deepseek.com/anthropic';
+  document.getElementById('f-ds-models').value = 'deepseek-chat,deepseek-reasoner';
+  document.getElementById('f-port').value      = '8000';
+  document.getElementById('env-section').style.display = 'none';
+}
+
+function copyEnv() {
+  navigator.clipboard.writeText(_generatedEnv).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+pollStatus();
+setInterval(pollStatus, 15000);
 </script>
 </body>
 </html>

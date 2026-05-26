@@ -55,6 +55,7 @@ _scan_logger = logging.getLogger("app.scan")
 
 ALLOWED_ROUTES: set[tuple[str, str]] = {
     ("GET", "/health"),
+    ("GET", "/status"),
     ("GET", "/v1/models"),
     ("POST", "/v1/messages"),
     ("POST", "/v1/messages/count_tokens"),
@@ -172,6 +173,40 @@ async def ui():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/status")
+async def status():
+    """Return current proxy configuration state (no secrets)."""
+    from app.router import MODEL_REGISTRY
+    models = list(MODEL_REGISTRY.keys())
+    backends: dict = {}
+    for model_id, backend in MODEL_REGISTRY.items():
+        backends.setdefault(backend.name, []).append(model_id)
+
+    return {
+        "status": "ok",
+        "models": models,
+        "backends": [
+            {"name": name, "models": mlist}
+            for name, mlist in backends.items()
+        ],
+        "vision": {
+            "enabled": bool(settings.vision_base_url and settings.vision_api_key and settings.vision_model),
+            "model": settings.vision_model or None,
+            "base_url": settings.vision_base_url or None,
+        },
+        "web_search": {
+            "enabled": bool(
+                (settings.web_search_provider == "tavily" and settings.tavily_api_key)
+                or (settings.web_search_provider == "brave" and settings.brave_api_key)
+            ),
+            "provider": settings.web_search_provider,
+        },
+        "web_fetch": {
+            "enabled": True,
+        },
+    }
 
 
 @app.post("/api/event_logging/batch")
