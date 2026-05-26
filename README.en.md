@@ -4,13 +4,9 @@
 
 [中文文档](./README.md)
 
-DeepSeek's API is text-only and Anthropic-shaped. Most AI clients (Cline, Cherry Studio, LangChain, Claude Code, Cursor) expect:
+DeepSeek's API is text-only, which severely limits Agent capabilities and user experience — especially in tools like Claude Code where web search and fetch are essential. This proxy fills all the gaps.
 
-- Multimodal input (images, screenshots, PDFs)
-- Built-in `web_search` / `web_fetch` tools
-- The OpenAI `/v1/chat/completions` interface
-
-deepseek-vision adds all three, so a single DeepSeek API key plugs into any tool that supports Claude or GPT-4.
+This project is a side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any Claude- or GPT-4-compatible tool.
 
 ---
 
