@@ -12,7 +12,6 @@ from app.auth import require_auth
 from app.config import settings
 from app.router import select_backend
 from app.schemas import MessageRequest, CountTokensRequest, CountTokensResponse
-from app import slow_log
 
 logger = logging.getLogger(__name__)
 
@@ -73,33 +72,6 @@ def _log_req(
         parts.append(f"err={error[:200]}")
     logger.info("[REQ] " + " ".join(parts))
 
-
-def _maybe_dump_slow(
-    meta: Optional[Dict[str, Any]],
-    *,
-    request_id: str,
-    stream: bool,
-    duration_ms: int,
-    input_tokens: int,
-    output_tokens: int,
-    cache_read: int,
-    cache_write: int,
-) -> None:
-    if not slow_log.should_dump(duration_ms):
-        return
-    response_body: Any = (meta or {}).get("response_body")
-    slow_log.dump(
-        request_id=request_id,
-        model_id=(meta or {}).get("model_id", "-"),
-        stream=stream,
-        duration_ms=duration_ms,
-        request_size_bytes=(meta or {}).get("request_size_bytes"),
-        input_tokens=input_tokens,
-        output_tokens=output_tokens,
-        cache_read_tokens=cache_read,
-        cache_write_tokens=cache_write,
-        response_body=response_body,
-    )
 
 
 def _extract_sse_data(chunk: str) -> Optional[Dict[str, Any]]:
@@ -179,16 +151,6 @@ async def _logged_stream(
             server_tool=server_tool,
             error=error,
             req_size_bytes=(meta or {}).get("request_size_bytes"),
-        )
-        _maybe_dump_slow(
-            meta,
-            request_id=request_id,
-            stream=True,
-            duration_ms=duration_ms,
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cache_read=cache_read,
-            cache_write=cache_write,
         )
 
 
@@ -272,16 +234,6 @@ async def create_message(
             cache_read=usage.cache_read_input_tokens or 0,
             server_tool=usage.server_tool_use,
             req_size_bytes=meta.get("request_size_bytes"),
-        )
-        _maybe_dump_slow(
-            meta,
-            request_id=request_id,
-            stream=False,
-            duration_ms=duration_ms,
-            input_tokens=usage.input_tokens or 0,
-            output_tokens=usage.output_tokens or 0,
-            cache_read=usage.cache_read_input_tokens or 0,
-            cache_write=usage.cache_creation_input_tokens or 0,
         )
         return JSONResponse(content=response.model_dump(exclude_none=True))
 

@@ -71,11 +71,6 @@ class Settings(BaseSettings):
     stream_ping_interval_sec: int = Field(default=10, alias="STREAM_PING_INTERVAL_SEC")
     stream_gap_warn_sec: int = Field(default=10, alias="STREAM_GAP_WARN_SEC")
 
-    # Slow-request diagnostic dumps
-    slow_request_threshold_ms: int = Field(default=20000, alias="SLOW_REQUEST_THRESHOLD_MS")
-    slow_request_log_dir: str = Field(default="logs/slow_requests", alias="SLOW_REQUEST_LOG_DIR")
-    slow_request_retention_days: int = Field(default=30, alias="SLOW_REQUEST_RETENTION_DAYS")
-
     # Diagnostics: tracemalloc frame depth. 0 disables.
     tracemalloc_frames: int = Field(default=0, alias="TRACEMALLOC_FRAMES")
 

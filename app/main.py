@@ -112,11 +112,6 @@ async def lifespan(app: FastAPI):
 
     print("Starting deepseek-vision proxy")
     print(f"  Port: {settings.port}")
-    try:
-        from app import slow_log
-        slow_log.cleanup_old_dumps()
-    except Exception:
-        pass
     yield
     print("Shutting down")
     if tracemalloc.is_tracing():
