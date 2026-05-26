@@ -1,12 +1,12 @@
 # deepseek-vision
 
-**Vision, web search, and OpenAI-compatible proxy for DeepSeek models.**
+**Vision, web search, and Anthropic / OpenAI-compatible proxy for DeepSeek models.**
 
 [中文文档](./README.md)
 
 DeepSeek's API is text-only, which severely limits Agent capabilities and user experience — especially in tools like Claude Code where web search and fetch are essential. This proxy fills all the gaps.
 
-This project is a side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any Claude- or GPT-4-compatible tool.
+This project is a side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any AI tool.
 
 ---
 
