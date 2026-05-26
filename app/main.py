@@ -5,7 +5,7 @@ import re
 import tracemalloc
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -53,16 +53,22 @@ logging.getLogger("uvicorn.access").addFilter(_Drop404Filter())
 
 _scan_logger = logging.getLogger("app.scan")
 
+# Routes accessible without admin token
 ALLOWED_ROUTES: set[tuple[str, str]] = {
     ("GET", "/health"),
-    ("GET", "/status"),
-    ("POST", "/admin/apply"),
+    ("POST", "/admin/login"),       # login itself is open
     ("GET", "/v1/models"),
     ("POST", "/v1/messages"),
     ("POST", "/v1/messages/count_tokens"),
     ("POST", "/v1/chat/completions"),
     ("POST", "/api/event_logging/batch"),
     ("GET", "/"),
+}
+
+# Routes that require a valid admin token
+_ADMIN_ROUTES: set[tuple[str, str]] = {
+    ("GET", "/status"),
+    ("POST", "/admin/apply"),
 }
 
 _SCAN_PATTERN = re.compile(
@@ -102,7 +108,7 @@ async def lifespan(app: FastAPI):
         tracemalloc.start(frames)
         print(f"  tracemalloc: enabled ({frames} frames)")
     else:
-        print(f"  tracemalloc: disabled")
+        print("  tracemalloc: disabled")
 
     print("Starting deepseek-vision proxy")
     print(f"  Port: {settings.port}")
@@ -125,40 +131,78 @@ app = FastAPI(
     openapi_url=None,
 )
 
-_ALLOWED_PATHS = {path for _, path in ALLOWED_ROUTES}
+_ALL_ALLOWED = ALLOWED_ROUTES | _ADMIN_ROUTES
 
 
 @app.middleware("http")
-async def whitelist_middleware(request: Request, call_next):
+async def security_middleware(request: Request, call_next):
     method = request.method
     path = request.url.path
 
     if method == "OPTIONS":
-        return await call_next(request)
+        resp = await call_next(request)
+        return _add_security_headers(resp)
+
+    if method == "GET" and path.startswith("/assets/"):
+        resp = await call_next(request)
+        return _add_security_headers(resp)
 
     if (method, path) in ALLOWED_ROUTES:
-        return await call_next(request)
+        resp = await call_next(request)
+        return _add_security_headers(resp)
 
-    # Allow Vite-built static assets
-    if method == "GET" and path.startswith("/assets/"):
-        return await call_next(request)
+    if (method, path) in _ADMIN_ROUTES:
+        from app.admin_auth import verify_token
+        auth = request.headers.get("authorization", "")
+        if not (auth.startswith("Bearer ") and verify_token(auth[7:])):
+            return JSONResponse(
+                status_code=401,
+                content={"type": "error", "error": {"type": "authentication_error", "message": "Admin login required"}},
+                headers=_security_header_dict(),
+            )
+        resp = await call_next(request)
+        return _add_security_headers(resp)
 
     if method == "HEAD":
-        return Response(status_code=200)
+        return Response(status_code=200, headers=_security_header_dict())
 
     ip = _resolve_ip(request)
     ua = request.headers.get("user-agent", "-")[:80]
     tag = _classify(path)
     _scan_logger.info(f'[SCAN] {method} {path} tag={tag} ip={ip} ua="{ua}"')
-    return Response(status_code=404, content="Not Found", media_type="text/plain")
+    return Response(status_code=404, content="Not Found", media_type="text/plain",
+                    headers=_security_header_dict())
 
 
+def _security_header_dict() -> dict:
+    return {
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy": (
+            "default-src 'self'; "
+            "script-src 'self'; "
+            "style-src 'self' 'unsafe-inline'; "   # inline styles for CSS-in-JS
+            "img-src 'self' data:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        ),
+    }
+
+
+def _add_security_headers(response: Response) -> Response:
+    for k, v in _security_header_dict().items():
+        response.headers[k] = v
+    return response
+
+
+# CORS: restrict to same-origin for admin routes; open for API routes
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "x-api-key", "anthropic-beta"],
 )
 
 app.include_router(messages_router, prefix="/v1")
@@ -169,7 +213,6 @@ app.include_router(openai_router, prefix="/v1")
 
 _STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
-# Mount hashed assets (JS/CSS produced by Vite)
 if os.path.isdir(os.path.join(_STATIC_DIR, "assets")):
     app.mount("/assets", StaticFiles(directory=os.path.join(_STATIC_DIR, "assets")), name="assets")
 
@@ -184,9 +227,29 @@ async def health():
     return {"status": "ok"}
 
 
+@app.post("/admin/login")
+async def admin_login(request: Request):
+    from app.admin_auth import _check_rate_limit, issue_token
+    ip = _resolve_ip(request)
+    if not _check_rate_limit(ip):
+        raise HTTPException(
+            status_code=429,
+            detail={"type": "rate_limit", "message": "Too many login attempts, wait 5 minutes"},
+        )
+    body = await request.json()
+    password = body.get("password", "")
+    import hmac
+    if not hmac.compare_digest(str(password), settings.admin_password):
+        raise HTTPException(
+            status_code=401,
+            detail={"type": "authentication_error", "message": "Invalid password"},
+        )
+    return {"token": issue_token()}
+
+
 @app.post("/admin/apply")
 async def admin_apply(request: Request):
-    """Write the submitted .env content to disk, then restart the process."""
+    """Write submitted .env to disk, then restart. Auth enforced by middleware."""
     import asyncio
     import signal
     body = await request.json()
@@ -194,14 +257,25 @@ async def admin_apply(request: Request):
     if not isinstance(env_text, str):
         raise HTTPException(status_code=400, detail={"type": "bad_request", "message": "env must be a string"})
 
+    # Refuse to write anything that looks like a path traversal or shell injection
+    if any(c in env_text for c in ["\x00", "\r"]):
+        raise HTTPException(status_code=400, detail={"type": "bad_request", "message": "Invalid content"})
+
     env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
+    # Write atomically: temp file → rename
+    tmp_path = env_path + ".tmp"
     try:
-        with open(env_path, "w", encoding="utf-8") as f:
+        with open(tmp_path, "w", encoding="utf-8") as f:
             f.write(env_text)
+        os.replace(tmp_path, env_path)
     except OSError as e:
         raise HTTPException(status_code=500, detail={"type": "io_error", "message": str(e)})
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
-    # Respond first, then trigger restart after a brief delay so the response is delivered.
     async def _restart():
         await asyncio.sleep(0.4)
         os.kill(os.getpid(), signal.SIGTERM)
@@ -212,7 +286,7 @@ async def admin_apply(request: Request):
 
 @app.get("/status")
 async def status():
-    """Return current proxy configuration state (no secrets)."""
+    """Return current proxy state. Auth enforced by middleware."""
     from app.router import MODEL_REGISTRY
     models = list(MODEL_REGISTRY.keys())
     backends: dict = {}
@@ -222,14 +296,10 @@ async def status():
     return {
         "status": "ok",
         "models": models,
-        "backends": [
-            {"name": name, "models": mlist}
-            for name, mlist in backends.items()
-        ],
+        "backends": [{"name": name, "models": mlist} for name, mlist in backends.items()],
         "vision": {
             "enabled": bool(settings.vision_base_url and settings.vision_api_key and settings.vision_model),
             "model": settings.vision_model or None,
-            "base_url": settings.vision_base_url or None,
         },
         "web_search": {
             "enabled": bool(
@@ -238,9 +308,7 @@ async def status():
             ),
             "provider": settings.web_search_provider,
         },
-        "web_fetch": {
-            "enabled": True,
-        },
+        "web_fetch": {"enabled": True},
     }
 
 
@@ -255,8 +323,10 @@ async def http_exception_handler(request, exc: HTTPException):
         return JSONResponse(
             status_code=exc.status_code,
             content={"type": "error", "error": exc.detail},
+            headers=_security_header_dict(),
         )
     return JSONResponse(
         status_code=exc.status_code,
         content={"type": "error", "error": {"type": "api_error", "message": str(exc.detail)}},
+        headers=_security_header_dict(),
     )

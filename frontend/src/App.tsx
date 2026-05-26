@@ -213,6 +213,7 @@ function StatusSection({ data, offline }: { data: StatusData | null; offline: bo
 // ── .env generator ─────────────────────────────────────────────────────────
 
 interface FormState {
+  adminPassword: string
   masterKeys: string[]
   dsKey: string
   dsUrl: string
@@ -230,8 +231,10 @@ interface FormState {
 }
 
 const DEFAULTS: FormState = {
+  adminPassword: '',
   masterKeys: [''],
   dsKey: '',
+
   dsUrl: 'https://api.deepseek.com/anthropic',
   dsModels: 'deepseek-v4-pro,deepseek-v4-flash',
   visUrl: '',
@@ -256,6 +259,7 @@ function buildEnvText(f: FormState): string {
   return [
     '# 必填',
     envLine('MASTER_API_KEY', masterKey),
+    envLine('ADMIN_PASSWORD', f.adminPassword),
     envLine('DEEPSEEK_API_KEY', f.dsKey),
     `DEEPSEEK_BASE_URL=${f.dsUrl}`,
     `DEEPSEEK_MODELS=${f.dsModels}`,
@@ -307,7 +311,7 @@ function EnvPreview({ text }: { text: string }) {
   )
 }
 
-function ConfigSection() {
+function ConfigSection({ token }: { token: string }) {
   const [form, setForm] = useState<FormState>(DEFAULTS)
   const [generated, setGenerated] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -340,7 +344,7 @@ function ConfigSection() {
     try {
       const r = await fetch('/admin/apply', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
         body: JSON.stringify({ env: generated }),
       })
       if (!r.ok) throw new Error(`HTTP ${r.status}`)
@@ -414,8 +418,18 @@ function ConfigSection() {
 
         {/* Auth */}
         <div className="form-group">
-          <div className="form-group-title">代理鉴权 Key（MASTER_API_KEY）</div>
-          <Field label="" hint="客户端使用这些 Key 访问本代理，可添加多个">
+          <div className="form-group-title">认证配置</div>
+          <Field label="ADMIN_PASSWORD（配置器登录密码）"
+            hint="留空则保持当前密码不变；修改后需重新登录">
+            <input
+              type="password"
+              value={form.adminPassword}
+              onChange={e => set('adminPassword', e.target.value)}
+              placeholder="留空保持不变（当前默认 123456）"
+              autoComplete="new-password"
+            />
+          </Field>
+          <Field label="MASTER_API_KEY（客户端访问 Key）" hint="客户端使用这些 Key 访问代理，可添加多个">
             <ApiKeyManager
               keys={form.masterKeys}
               onChange={v => set('masterKeys', v)}
@@ -572,14 +586,88 @@ function ConfigSection() {
 
 // ── App ────────────────────────────────────────────────────────────────────
 
+// ── Login screen ──────────────────────────────────────────────────────────
+
+function LoginScreen({ onLogin }: { onLogin: (token: string) => void }) {
+  const [pw, setPw] = useState('')
+  const [err, setErr] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true); setErr('')
+    try {
+      const r = await fetch('/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      })
+      if (r.status === 429) { setErr('登录尝试过于频繁，请等待 5 分钟后重试'); return }
+      if (!r.ok) { setErr('密码错误'); return }
+      const { token } = await r.json()
+      sessionStorage.setItem('admin_token', token)
+      onLogin(token)
+    } catch {
+      setErr('网络错误，请检查服务是否运行')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'var(--bg)',
+    }}>
+      <div className="card" style={{ width: 340, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <img src="/icon.png" alt="logo" style={{ width: 40, height: 40, borderRadius: 10, objectFit: 'cover' }} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>deepseek-vision</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>配置器登录</div>
+          </div>
+        </div>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Field label="管理员密码">
+            <input
+              type="password"
+              value={pw}
+              onChange={e => setPw(e.target.value)}
+              placeholder="输入密码（默认 123456）"
+              autoFocus
+              autoComplete="current-password"
+            />
+          </Field>
+          {err && <div style={{ fontSize: 13, color: 'var(--err)' }}>{err}</div>}
+          <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%' }}>
+            {loading ? '登录中…' : '登录'}
+          </button>
+        </form>
+        <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+          默认密码 <code>123456</code>，请在配置器中设置 <code>ADMIN_PASSWORD</code> 修改。
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── App ────────────────────────────────────────────────────────────────────
+
 export default function App() {
+  const [token, setToken] = useState<string | null>(sessionStorage.getItem('admin_token'))
   const [status, setStatus] = useState<StatusData | null>(null)
   const [offline, setOffline] = useState(false)
   const [models, setModels] = useState<string[]>([])
 
+  function authHeaders(): Record<string, string> {
+    return token ? { authorization: `Bearer ${token}` } : {} as Record<string, string>
+  }
+
   async function poll() {
+    if (!token) return
     try {
-      const r = await fetch('/status')
+      const r = await fetch('/status', { headers: authHeaders() })
+      if (r.status === 401) { setToken(null); sessionStorage.removeItem('admin_token'); return }
       if (!r.ok) throw new Error()
       const data: StatusData = await r.json()
       setStatus(data)
@@ -594,10 +682,19 @@ export default function App() {
     poll()
     const id = setInterval(poll, 15_000)
     return () => clearInterval(id)
-  }, [])
+  }, [token])
+
+  if (!token) {
+    return <LoginScreen onLogin={t => { setToken(t) }} />
+  }
 
   const liveClass = offline ? 'err' : status ? 'ok' : ''
   const liveLabel = offline ? '离线' : status ? '在线' : '检测中…'
+
+  function logout() {
+    sessionStorage.removeItem('admin_token')
+    setToken(null)
+  }
 
   return (
     <div className="layout">
@@ -608,6 +705,11 @@ export default function App() {
         <div className="header-live">
           <div className={`live-dot ${liveClass}`} />
           <span>{liveLabel}</span>
+          <button
+            onClick={logout}
+            style={{ marginLeft: 12, fontSize: 12, background: 'none', border: 'none',
+                     color: 'var(--text3)', cursor: 'pointer', padding: '2px 6px' }}
+          >退出</button>
         </div>
       </header>
 
@@ -629,7 +731,7 @@ export default function App() {
 
         <div className="section">
           <SectionHeader title="配置生成" />
-          <ConfigSection />
+          <ConfigSection token={token} />
         </div>
       </main>
     </div>

@@ -25,6 +25,9 @@ class Settings(BaseSettings):
             return [str(k).strip() for k in v if str(k).strip()]
         return []
 
+    # Admin dashboard password (protects /status, /admin/*)
+    admin_password: str = Field(default="123456", alias="ADMIN_PASSWORD")
+
     # DeepSeek upstream (Anthropic Messages-compatible endpoint)
     deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
     deepseek_base_url: str = Field(default="https://api.deepseek.com/anthropic", alias="DEEPSEEK_BASE_URL")
