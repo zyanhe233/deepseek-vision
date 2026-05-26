@@ -11,21 +11,19 @@ class Settings(BaseSettings):
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     debug_upstream: bool = Field(default=False, alias="DEBUG_UPSTREAM")
 
-    # Auth: comma-separated list of allowed API keys
-    master_api_keys: Annotated[List[str], NoDecode] = Field(alias="MASTER_API_KEY")
+    # Auth: comma-separated list of allowed API keys.
+    # Empty by default so the server can start without a .env file
+    # (the dashboard at / is accessible; all API routes return 401).
+    master_api_keys: Annotated[List[str], NoDecode] = Field(default="", alias="MASTER_API_KEY")
 
     @field_validator("master_api_keys", mode="before")
     @classmethod
     def _split_keys(cls, v: object) -> List[str]:
         if isinstance(v, str):
-            keys = [k.strip() for k in v.split(",") if k.strip()]
-        elif isinstance(v, list):
-            keys = [str(k).strip() for k in v if str(k).strip()]
-        else:
-            keys = []
-        if not keys:
-            raise ValueError("MASTER_API_KEY must contain at least one key")
-        return keys
+            return [k.strip() for k in v.split(",") if k.strip()]
+        if isinstance(v, list):
+            return [str(k).strip() for k in v if str(k).strip()]
+        return []
 
     # DeepSeek upstream (Anthropic Messages-compatible endpoint)
     deepseek_api_key: Optional[str] = Field(default=None, alias="DEEPSEEK_API_KEY")
