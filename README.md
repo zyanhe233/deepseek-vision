@@ -6,7 +6,7 @@
 
 DeepSeek 官方 API 是纯文本模型，这会极大限制 Agent 的能力以及用户的对话体验，尤其是在 Claude Code 等场景使用时还需要额外的联网搜索和抓取能力，本项目也一并补齐。
 
-本项目是 [Proma](https://proma.cool) 的旁支开源项目。Proma 是最丝滑的通用开源 Agent，对 DeepSeek v4 系列的适配最为完整，已在云端服务中补齐了包括视觉、联网搜索在内的全部缺失能力，欢迎直接使用。本仓库提供可自部署的代理版本，让你用同一个 DeepSeek API Key 接入任何 AI 工具。
+原作者：[ErlichLiu](https://github.com/ErlichLiu)，源自 [Proma](https://proma.cool) 项目。Proma 是最丝滑的通用开源 Agent，对 DeepSeek v4 系列的适配最为完整，已在云端服务中补齐了包括视觉、联网搜索在内的全部缺失能力，欢迎直接使用。本仓库提供可自部署的代理版本，让你用同一个 DeepSeek API Key 接入任何 AI 工具。
 
 ---
 

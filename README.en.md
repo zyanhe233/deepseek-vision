@@ -6,7 +6,7 @@
 
 DeepSeek's API is text-only, which severely limits Agent capabilities and user experience — especially in tools like Claude Code where web search and fetch are essential. This proxy fills all the gaps.
 
-This project is a side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any AI tool.
+Original author: [ErlichLiu](https://github.com/ErlichLiu), side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any AI tool.
 
 ---
 
