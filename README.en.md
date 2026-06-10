@@ -20,11 +20,11 @@ Original author: [ErlichLiu](https://github.com/ErlichLiu), side open-source pro
 
 ### Config UI (recommended)
 
-Start the proxy and open `http://localhost:8000`. Fill in your API keys in the config dashboard and click "Apply & Restart".
+Start the proxy and open `http://localhost:8001`. Fill in your API keys in the config dashboard and click "Apply & Restart".
 
 ```bash
 docker build -t deepseek-vision .
-docker run -p 8000:8000 deepseek-vision
+docker run -p 8001:8001 deepseek-vision
 ```
 
 ### Manual
@@ -32,7 +32,7 @@ docker run -p 8000:8000 deepseek-vision
 ```bash
 cp .env.example .env
 # Edit .env: at minimum set ADMIN_PASSWORD, MASTER_API_KEY, DEEPSEEK_API_KEY
-docker run --env-file .env -p 8000:8000 deepseek-vision
+docker run --env-file .env -p 8001:8001 deepseek-vision
 ```
 
 ---
@@ -115,7 +115,7 @@ TAVILY_API_KEY=tvly-...
 | `WEB_SEARCH_PROVIDER` | `tavily` | Search provider (`tavily` or `brave`) |
 | `TAVILY_API_KEY` | — | Tavily API key |
 | `BRAVE_API_KEY` | — | Brave Search API key |
-| `PORT` | `8000` | Server port |
+| `PORT` | `8001` | Server port |
 | `LOG_LEVEL` | `INFO` | Log level |
 
 ---

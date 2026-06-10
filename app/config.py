@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, NoDecode
 
 class Settings(BaseSettings):
     # Server
-    port: int = Field(default=8000, alias="PORT")
+    port: int = Field(default=8001, alias="PORT")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     debug_upstream: bool = Field(default=False, alias="DEBUG_UPSTREAM")
 

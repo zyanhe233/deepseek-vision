@@ -245,7 +245,7 @@ const DEFAULTS: FormState = {
   visMaxImages: '5',
   webSearch: false,
   webFetch: false,
-  port: '8000',
+  port: '8001',
   logLevel: 'INFO',
 }
 
@@ -576,7 +576,7 @@ function ConfigSection({ token }: { token: string }) {
             也可以手动保存为项目根目录下的 <code>.env</code> 文件后重启服务：
           </div>
           <div className="run-cmd">
-            {'docker build -t deepseek-vision . &&\ndocker run --env-file .env -p 8000:8000 deepseek-vision'}
+            {'docker build -t deepseek-vision . &&\ndocker run --env-file .env -p 8001:8001 deepseek-vision'}
           </div>
         </div>
       )}

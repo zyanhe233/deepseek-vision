@@ -39,6 +39,6 @@ RUN mkdir -p logs && \
 
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8001
 
 CMD ["python", "main.py"]
