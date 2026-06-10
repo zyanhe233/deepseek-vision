@@ -8,6 +8,12 @@ DeepSeek's API is text-only, which severely limits Agent capabilities and user e
 
 Original author: [ErlichLiu](https://github.com/ErlichLiu), side open-source project from [Proma](https://proma.cool) — the smoothest general-purpose open Agent, with the most complete DeepSeek v4 support including vision and web search built in. This repo provides a self-hostable proxy version so you can plug a single DeepSeek API key into any AI tool.
 
+### Improvements by @zyanhe233
+
+- **Free vision backend**: Default vision model switched to SiliconFlow's `Qwen/Qwen3-VL-8B-Instruct` (free), no paid DashScope needed
+- **Standalone CLI tool**: Added [`vision-cli.py`](./vision-cli.py) — direct image recognition from command line, no proxy service required. Supports three key input methods: env var / config file / interactive prompt
+- **Port change**: Default port changed to `8001`
+
 ---
 
 ## Quick start
